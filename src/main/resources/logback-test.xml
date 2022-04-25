@@ -1,0 +1,15 @@
+<configuration debug="false" scan="false" scanPeriod="5 seconds">
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%date{HH:mm:ss.SSS} %-5level [%logger{36}] \(%thread\) \(%X{request_id}\) %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="com.edorasware.commons.core.persistence.jdbc.JdbcPersistence" level="TRACE"/>
+
+    <root level="info">
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+</configuration>
