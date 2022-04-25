@@ -6,5 +6,5 @@ import reactor.core.publisher.Mono;
 public interface EmployeeRepository {
     Mono<Employee> findEmployeeById(String id);
 
-    Flux<Employee> findAllEmployees();
+    Flux<Employee> findEmployees(String[] ids);
 }

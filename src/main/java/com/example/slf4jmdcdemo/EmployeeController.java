@@ -1,10 +1,7 @@
 package com.example.slf4jmdcdemo;
 
 import lombok.NonNull;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -19,12 +16,12 @@ public class EmployeeController {
     }
 
     @GetMapping("/{id}")
-    private Mono<Employee> getEmployeeById(@PathVariable String id) {
+    private Mono<Employee> findEmployeeById(@PathVariable String id) {
         return employeeRepository.findEmployeeById(id);
     }
 
     @GetMapping
-    private Flux<Employee> getAllEmployees() {
-        return employeeRepository.findAllEmployees();
+    private Flux<Employee> findEmployees(@RequestParam String[] ids) {
+        return employeeRepository.findEmployees(ids);
     }
 }

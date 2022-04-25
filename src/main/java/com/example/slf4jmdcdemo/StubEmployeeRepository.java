@@ -45,7 +45,7 @@ public class StubEmployeeRepository implements EmployeeRepository {
         return Mono.just(employeeData.get(id));
     }
 
-    public Flux<Employee> findAllEmployees() {
+    public Flux<Employee> findEmployees(String[] ids) {
         return Flux.fromIterable(employeeData.values());
     }
 }
