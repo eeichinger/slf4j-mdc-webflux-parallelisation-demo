@@ -34,9 +34,20 @@ class Slf4jMdcDemoApplicationTests {
 
 	MapPropertySource testPropertySource = new MapPropertySource(Slf4jMdcDemoApplicationTests.class + ".properties", new HashMap<>());
 
+	@BeforeAll
+	static void beforeAll() {
+		initJadler();
+	}
+
+	@AfterAll
+	static void afterAll() {
+		closeJadler();
+	}
+
 	@BeforeEach
 	void before() {
-		initJadler();
+		resetJadler();
+
 		// override backend url for testing
 		testPropertySource.getSource().put(WebClientEmployeeRepository.PROP_EMPLOYEE_SERVICE_URL, "http://localhost:" + Jadler.port());
 		env.getPropertySources().addFirst(testPropertySource);
@@ -67,7 +78,7 @@ class Slf4jMdcDemoApplicationTests {
 
 	@Test
 	void fetch_multiple_employees_parallel() {
-		register_onScheduleHook();
+		MdcHooks.register_onScheduleHook();
 
 		WebClient webClient = WebClient.create("http://localhost:" + port);
 
@@ -83,37 +94,6 @@ class Slf4jMdcDemoApplicationTests {
 				.bodyToFlux(Employee.class).toIterable().forEach(employees::add);
 
 		MatcherAssert.assertThat(employees.size(), Matchers.equalTo(3));
-	}
-
-	private void register_onScheduleHook() {
-		Schedulers.onScheduleHook("", r->{
-			final Logger log = LoggerFactory.getLogger(this.getClass());
-
-			log.info("capture mdc");
-			final Map<String, String> capturedMdc = MDC.getCopyOfContextMap();
-
-			return new Runnable() {
-				public void run() {
-
-					log.info("apply mdc");
-					final Map<String, String> oldMdc = MDC.getCopyOfContextMap();
-					setMdcSafe(capturedMdc);
-					try {
-						r.run();
-					} finally {
-						log.info("restore mdc");
-						setMdcSafe(oldMdc);
-					}
-				}
-
-				private void setMdcSafe(Map<String, String> capturedMdc) {
-					if (capturedMdc != null)
-						MDC.setContextMap(capturedMdc);
-					else
-						MDC.clear();
-				}
-			};
-		});
 	}
 
 	static private void stubEmployeeServiceResponse(String id) {

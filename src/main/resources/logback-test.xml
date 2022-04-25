@@ -6,7 +6,7 @@
         </encoder>
     </appender>
 
-    <logger name="com.edorasware.commons.core.persistence.jdbc.JdbcPersistence" level="TRACE"/>
+<!--    <logger name="reactor.netty.http.client" level="DEBUG"/>-->
 
     <root level="info">
         <appender-ref ref="STDOUT"/>
