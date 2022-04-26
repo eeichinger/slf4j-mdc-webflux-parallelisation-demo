@@ -3,19 +3,12 @@ package com.example.slf4jmdcdemo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
-import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
 import java.util.Map;
 
 public class MdcHooks {
     private static final Logger log = LoggerFactory.getLogger(MdcHooks.class);
-
-    private static final Scheduler scheduler = Schedulers.parallel();
-
-    public static Scheduler scheduler() {
-        return scheduler;
-    }
 
     public static void clear() {
         Schedulers.resetOnScheduleHook("mdc");
@@ -28,9 +21,17 @@ public class MdcHooks {
     private static Runnable instrumentWorkerRunnable(Runnable r) {
         log.info("capture mdc");
         return new Runnable() {
+            final long capturedThreadId = Thread.currentThread().getId();
             final Map<String, String> capturedMdc = MDC.getCopyOfContextMap();
 
             public void run() {
+                final long threadId = Thread.currentThread().getId();
+                if (threadId == capturedThreadId) {
+                    log.info("on original thread, bypassing mdc handling");
+                    r.run();
+                    return;
+                }
+
                 final Map<String, String> oldMdc = MDC.getCopyOfContextMap();
                 setMdcSafe(capturedMdc);
                 log.info("applied mdc");

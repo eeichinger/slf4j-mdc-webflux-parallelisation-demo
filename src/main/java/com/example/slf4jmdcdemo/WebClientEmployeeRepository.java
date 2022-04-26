@@ -9,6 +9,8 @@ import org.springframework.stereotype.Repository;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.function.Function;
 
@@ -16,17 +18,31 @@ import java.util.function.Function;
 public class WebClientEmployeeRepository implements EmployeeRepository {
     private final Logger log = LoggerFactory.getLogger(this.getClass());
 
-    public static final String PROP_EMPLOYEE_SERVICE_URL = "employeeservice.url";
+    public static final String PROP_EMPLOYEE_SERVICE_URL = "backend.employeeServiceClient.url";
+//    public static final String PROP_EMPLOYEE_SERVICE_TIMEOUT = "backend.employeeservice.timeout";
 
     private final PropertyResolver env;
     private final WebClient webClient;
 
     @SuppressWarnings("FieldCanBeLocal")
     private final int parallelRails = 2;
+    private final Scheduler scheduler;
 
-    public WebClientEmployeeRepository(@NonNull PropertyResolver env, WebClient webClient) {
+    public WebClientEmployeeRepository(@NonNull PropertyResolver env, @NonNull WebClientFactory webClientFactory) {
         this.env = env;
-        this.webClient = webClient;
+        this.scheduler = Schedulers.newParallel("employeeServiceProcessor", parallelRails);
+        this.webClient = webClientFactory.create("employeeServiceClient")
+/*
+                // we could override webClient settings like this:
+                .mutate()
+                .filter((request, next)->{
+                    return next.exchange(request)
+                            .timeout(Duration.ofMillis(env.getProperty(PROP_EMPLOYEE_SERVICE_TIMEOUT, Long.class, 10000L)))
+                            ;
+                })
+                .build()
+*/
+        ;
     }
 
     @Override
@@ -51,11 +67,26 @@ public class WebClientEmployeeRepository implements EmployeeRepository {
 
     @Override
     public Flux<Employee> findEmployees(String[] ids) {
-        final Function<String, Publisher<Employee>> id2employee = id -> findEmployeeById(id).flux();
-        return Flux.just(ids)
+        final Flux<String> idsFlux = Flux.just(ids);
+
+        // run either sequential or parallel to compare
+//        return run(idsFlux, id -> findEmployeeById(id));
+        return runParallel(idsFlux, id -> findEmployeeById(id));
+    }
+
+    private Flux<Employee> run(Flux<String> ids, Function<String, Publisher<Employee>> findEmployeeById) {
+        return ids
+                .flatMap(findEmployeeById);
+    }
+
+    private Flux<Employee> runParallel(Flux<String> ids, Function<String, Publisher<Employee>> findEmployeeById) {
+        return ids
+                // only for demo - parallelisation is actually not needed in our case because all backend calls
+                // are performed NIO (and thus on separate threads) anyway
                 .parallel(parallelRails, parallelRails)
-                .runOn(MdcHooks.scheduler())
-                .flatMap(id2employee)
-                .sequential();
+                .runOn(scheduler)
+                .flatMap(findEmployeeById)
+                .sequential()
+                ;
     }
 }
