@@ -1,24 +1,16 @@
 package com.example.slf4jmdcdemo;
 
-import lombok.NonNull;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.CorePublisher;
-import reactor.core.CoreSubscriber;
-import reactor.core.publisher.*;
+import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
-import reactor.util.context.Context;
 
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 public class MdcHooks {
@@ -35,10 +27,10 @@ public class MdcHooks {
     }
 
     public static void register_onScheduleHook() {
-        Schedulers.onScheduleHook("mdc", r -> mdcCapturer(r));
+        Schedulers.onScheduleHook("mdc", r -> instrumentWorkerRunnable(r));
     }
 
-    static Runnable mdcCapturer(Runnable r) {
+    private static Runnable instrumentWorkerRunnable(Runnable r) {
         log.info("capture mdc");
         return new Runnable() {
             final Map<String, String> capturedMdc = MDC.getCopyOfContextMap();
@@ -57,118 +49,20 @@ public class MdcHooks {
         };
     }
 
-    <T> Consumer<T> wrap(Runnable r) {
-        return (T) -> r.run();
-    }
-
-
-    public static Consumer<WebClient.Builder> instrument() {
+    public static Consumer<WebClient.Builder> instrumentWebClient() {
         return builder -> {
             builder.filters(filters -> {
-                filters.add(captureMdcFilter());
+                filters.add(instrumentExchangeFilter());
             });
         };
     }
 
-    private static ExchangeFilterFunction captureMdcFilter() {
-        return (request, next) -> {
-            return captureMdc(next.exchange(request));
-        };
+    private static ExchangeFilterFunction instrumentExchangeFilter() {
+        return (request, next) -> instrumentExchange(next.exchange(request));
     }
 
-    static class MdcContextLifter<T> extends BaseSubscriber<T> {
-        final CoreSubscriber<T> source;
-        final AtomicReference<Map<String, String>> oldMdcReference = new AtomicReference<>();
-        final AtomicReference<Map<String, String>> capturedMdcReference = new AtomicReference<>();
-
-        public MdcContextLifter(@NonNull CoreSubscriber<T> source) {
-            this.source = source;
-        }
-
-        @Override
-        protected void hookOnSubscribe(Subscription subscription) {
-            capturedMdcReference.set(MDC.getCopyOfContextMap());
-            source.onSubscribe(subscription);
-            log.info("hookOnSubscribe");
-        }
-
-        @Override
-        protected void hookOnNext(T value) {
-            oldMdcReference.set(MDC.getCopyOfContextMap());
-            setMdcSafe(capturedMdcReference.get());
-            log.info("hookOnNext");
-            source.onNext(value);
-        }
-
-        @Override
-        protected void hookOnComplete() {
-            log.info("hookOnComplete");
-            source.onComplete();
-        }
-
-        @Override
-        protected void hookOnError(Throwable throwable) {
-            log.info("hookOnThrowable");
-            source.onError(throwable);
-        }
-
-        @Override
-        protected void hookFinally(SignalType signalType) {
-            log.info("hookOnFinally:" + signalType);
-//            setMdcSafe(oldMdcReference.get());
-        }
-
-        @Override
-        public Context currentContext() {
-            return source.currentContext();
-        }
-    }
-
-    static class MonoLogger<I> extends MonoOperator<I, I> {
-
-        /**
-         * Build a {@link MonoOperator} wrapper around the passed parent {@link Publisher}
-         *
-         * @param source the {@link Publisher} to decorate
-         */
-        public MonoLogger(Mono<? extends I> source) {
-            super(source);
-        }
-
-        @Override
-        public void subscribe(CoreSubscriber<? super I> actual) {
-            source.subscribe(actual);
-        }
-
-
-    }
-
-    private static Mono<ClientResponse> captureMdc(Mono<ClientResponse> exchange) {
-//        return exchange.publishOn(scheduler());
+    private static Mono<ClientResponse> instrumentExchange(Mono<ClientResponse> exchange) {
         log.info("begin exchange");
-/*
-        return Mono.<ClientResponse, Class>using(
-                () -> {
-                    log.info("before using");
-                    return Void.class;
-                }
-                , c -> exchange.doFirst(() -> {
-                    log.info("do first");
-                })
-                , c -> {
-                    log.info("after using");
-                }
-        );
-*/
-
-/*
-        return new Mono<ClientResponse>() {
-            @Override
-            public void subscribe(CoreSubscriber<? super ClientResponse> actual) {
-                exchange.map(r->r).subscribe(new MdcContextLifter<>(actual));
-            }
-        };
-*/
 //        final AtomicReference<Map<String, String>> oldMdcReference = new AtomicReference<>();
         final Map<String, String> capturedMdc = MDC.getCopyOfContextMap();
 

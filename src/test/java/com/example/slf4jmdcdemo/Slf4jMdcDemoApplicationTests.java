@@ -47,6 +47,7 @@ class Slf4jMdcDemoApplicationTests {
 	@BeforeEach
 	void before() {
 		resetJadler();
+		MdcHooks.register_onScheduleHook();
 
 		// override backend url for testing
 		testPropertySource.getSource().put(WebClientEmployeeRepository.PROP_EMPLOYEE_SERVICE_URL, "http://localhost:" + Jadler.port());
@@ -56,7 +57,7 @@ class Slf4jMdcDemoApplicationTests {
 	@AfterEach
 	void after() {
 		env.getPropertySources().remove(testPropertySource.getName());
-		Schedulers.resetOnScheduleHooks();
+		MdcHooks.clear();
 	}
 
 	@Test
@@ -78,8 +79,6 @@ class Slf4jMdcDemoApplicationTests {
 
 	@Test
 	void fetch_multiple_employees_parallel() {
-		MdcHooks.register_onScheduleHook();
-
 		WebClient webClient = WebClient.create("http://localhost:" + port);
 
 		stubEmployeeServiceResponse("1");
@@ -98,9 +97,8 @@ class Slf4jMdcDemoApplicationTests {
 
 	static private void stubEmployeeServiceResponse(String id) {
 		onRequest()
-//                .havingMethodEqualTo("PUT")
+                .havingMethodEqualTo("GET")
                 .havingPathEqualTo("/employees/" + id)
-//                .havingBody(new JsonMatcher(file("/some/1234/segments/20202_PUT_request.json")))
 				.respond()
 				.withStatus(200)
 				.withContentType("application/json")

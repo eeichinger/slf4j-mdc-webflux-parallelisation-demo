@@ -19,15 +19,14 @@ public class WebClientEmployeeRepository implements EmployeeRepository {
     public static final String PROP_EMPLOYEE_SERVICE_URL = "employeeservice.url";
 
     private final PropertyResolver env;
-    private final WebClient webClient = WebClient.builder()
-            .apply(MdcHooks.instrument())
-            .build();
+    private final WebClient webClient;
 
     @SuppressWarnings("FieldCanBeLocal")
     private final int parallelRails = 2;
 
-    public WebClientEmployeeRepository(@NonNull PropertyResolver env) {
+    public WebClientEmployeeRepository(@NonNull PropertyResolver env, WebClient webClient) {
         this.env = env;
+        this.webClient = webClient;
     }
 
     @Override
