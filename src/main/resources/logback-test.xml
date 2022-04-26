@@ -6,7 +6,7 @@
         </encoder>
     </appender>
 
-<!--    <logger name="reactor.netty.http.client" level="DEBUG"/>-->
+    <logger name="reactor.netty.http.client" level="DEBUG"/>
 
     <root level="info">
         <appender-ref ref="STDOUT"/>
