@@ -37,7 +37,10 @@ public class WebClientFactory {
                     return next.exchange(request)
                             .log()
                             // alternatively we can set timeouts using reactor - we shouldn't mix it though
-                            .timeout(Duration.ofMillis(propertyResolver.getProperty("backend."+name+".timeoutMillis", Long.class, 30000L)))
+                            // also: triggering timeouts on reactor-level relies on integrations like WebClient to properly handle cancellations.
+                            // This is a bit akin to "Thread.abort()". It's therefore recommended to rather use timeout settings on the infrastructure level
+                            // (like connectTimeout and responseTimeout settings on ReactorClientHttpConnector as shown above) if possible.
+//                            .timeout(Duration.ofMillis(propertyResolver.getProperty("backend."+name+".timeoutMillis", Long.class, 30000L)))
                             ;
                 }).build();
     }
