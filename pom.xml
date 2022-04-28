@@ -20,6 +20,16 @@
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
+				<groupId>ch.qos.logback</groupId>
+				<artifactId>logback-classic</artifactId>
+				<scope>runtime</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.logging.log4j</groupId>
+				<artifactId>log4j-api</artifactId>
+				<scope>runtime</scope>
+			</dependency>
+			<dependency>
 				<groupId>org.eclipse.jetty</groupId>
 				<artifactId>jetty-server</artifactId>
 				<version>8.1.11.v20130520</version> <!-- Jetty 8 is the last JDK1.6 compatible version-->
