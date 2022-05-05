@@ -24,9 +24,9 @@ public class WebClientEmployeeRepository implements EmployeeRepository {
 
     private final PropertyResolver env;
     private final WebClient webClient;
-    private final FluxParalleliser paralleliser;
+    private final FluxParallelisationStrategy<String, Employee> paralleliser;
 
-    public WebClientEmployeeRepository(@NonNull PropertyResolver env, @NonNull @Qualifier(NAME) FluxParalleliser paralleliser, @NonNull @Qualifier(NAME) WebClient webClient) {
+    public WebClientEmployeeRepository(@NonNull PropertyResolver env, @NonNull @Qualifier(NAME) FluxParallelisationStrategy<String, Employee> paralleliser, @NonNull @Qualifier(NAME) WebClient webClient) {
         this.env = env;
         this.paralleliser = paralleliser;
         // probably inject that one as well
@@ -74,16 +74,12 @@ public class WebClientEmployeeRepository implements EmployeeRepository {
     }
 
     private Flux<Employee> run(Flux<String> ids, Function<String, Publisher<Employee>> findEmployeeById) {
-        return ids
-                .flatMap(findEmployeeById);
+        return ids.flatMap(findEmployeeById);
     }
 
     private Flux<Employee> runParallel(Flux<String> ids, Function<String, Publisher<Employee>> findEmployeeById) {
         // only for demo - parallelisation is actually not needed in our case because all backend calls
         // are performed NIO (and thus on separate threads) anyway
-        return paralleliser.parallelise(ids)
-                .flatMap(findEmployeeById)
-                .sequential()
-                ;
+        return paralleliser.parallelise(ids, findEmployeeById);
     }
 }

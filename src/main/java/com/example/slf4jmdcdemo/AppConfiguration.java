@@ -5,8 +5,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.ParallelFlux;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
@@ -26,18 +24,15 @@ public class AppConfiguration {
 
     @Bean
     @Qualifier(WebClientEmployeeRepository.NAME)
-    FluxParalleliser employeeFluxParalleliser() {
+    FluxParallelisationStrategy<String, Employee> employeeFluxParallelisationStrategy() {
 
         final int parallelRails = 2;
         Scheduler scheduler = Schedulers.newParallel("employeeServiceProcessor", parallelRails);
 
-        return new FluxParalleliser() {
-            @Override
-            public <T> ParallelFlux<T> parallelise(Flux<T> flux) {
-                return flux
-                        .parallel(parallelRails, parallelRails)
-                        .runOn(scheduler, parallelRails);
-            }
-        };
+        return (flux, mapper) -> flux
+                .parallel(parallelRails, parallelRails)
+                .runOn(scheduler, parallelRails)
+                .flatMap(mapper)
+                .sequential();
     }
 }
